@@ -1,4 +1,4 @@
-# mINI <img align="left" src="icon.png?raw=true" height="96">
+# mINI modified to work with [SIMDString](https://github.com/RobloxResearch/SIMDString) <img align="left" src="icon.png?raw=true" height="96">
 
 v0.9.15
 

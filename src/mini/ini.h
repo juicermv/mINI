@@ -53,11 +53,11 @@
 //
 //  /* read value; gets a reference to actual value in the structure.
 //     if key or section don't exist, a new empty value will be created */
-//  std::string& value = ini["section"]["key"];
+//  SIMDString<64>& value = ini["section"]["key"];
 //
 //  /* read value safely; gets a copy of value in the structure.
 //     does not alter the structure */
-//  std::string value = ini.get("section").get("key");
+//  SIMDString<64> value = ini.get("section").get("key");
 //
 //  /* set or update values */
 //  ini["section"]["key"] = "value";
@@ -83,7 +83,8 @@
 #ifndef MINI_INI_H_
 #define MINI_INI_H_
 
-#include <string>
+// #include <string>
+#include "../external/simdstring/SIMDString.h"
 #include <sstream>
 #include <algorithm>
 #include <utility>
@@ -98,26 +99,25 @@ namespace mINI
 {
 	namespace INIStringUtil
 	{
-		const char* const whitespaceDelimiters = " \t\n\r\f\v";
-		inline void trim(std::string& str)
+		const char *const whitespaceDelimiters = " \t\n\r\f\v";
+		inline void trim(SIMDString<64> &str)
 		{
 			str.erase(str.find_last_not_of(whitespaceDelimiters) + 1);
 			str.erase(0, str.find_first_not_of(whitespaceDelimiters));
 		}
 #ifndef MINI_CASE_SENSITIVE
-		inline void toLower(std::string& str)
+		inline void toLower(SIMDString<64> &str)
 		{
-			std::transform(str.begin(), str.end(), str.begin(), [](const char c) {
-				return static_cast<char>(std::tolower(c));
-			});
+			std::transform(str.begin(), str.end(), str.begin(), [](const char c)
+						   { return static_cast<char>(std::tolower(c)); });
 		}
 #endif
-		inline void replace(std::string& str, std::string const& a, std::string const& b)
+		inline void replace(SIMDString<64> &str, SIMDString<64> const &a, SIMDString<64> const &b)
 		{
 			if (!a.empty())
 			{
 				std::size_t pos = 0;
-				while ((pos = str.find(a, pos)) != std::string::npos)
+				while ((pos = str.find(a, pos)) != SIMDString<64>::npos)
 				{
 					str.replace(pos, a.size(), b);
 					pos += b.size();
@@ -125,25 +125,25 @@ namespace mINI
 			}
 		}
 #ifdef _WIN32
-		const char* const endl = "\r\n";
+		const char *const endl = "\r\n";
 #else
-		const char* const endl = "\n";
+		const char *const endl = "\n";
 #endif
 	}
 
-	template<typename T>
+	template <typename T>
 	class INIMap
 	{
 	private:
-		using T_DataIndexMap = std::unordered_map<std::string, std::size_t>;
-		using T_DataItem = std::pair<std::string, T>;
+		using T_DataIndexMap = std::unordered_map<SIMDString<64>, std::size_t>;
+		using T_DataItem = std::pair<SIMDString<64>, T>;
 		using T_DataContainer = std::vector<T_DataItem>;
-		using T_MultiArgs = typename std::vector<std::pair<std::string, T>>;
+		using T_MultiArgs = typename std::vector<std::pair<SIMDString<64>, T>>;
 
 		T_DataIndexMap dataIndexMap;
 		T_DataContainer data;
 
-		inline std::size_t setEmpty(std::string& key)
+		inline std::size_t setEmpty(SIMDString<64> &key)
 		{
 			std::size_t index = data.size();
 			dataIndexMap[key] = index;
@@ -154,26 +154,26 @@ namespace mINI
 	public:
 		using const_iterator = typename T_DataContainer::const_iterator;
 
-		INIMap() { }
+		INIMap() {}
 
-		INIMap(INIMap const& other) : dataIndexMap(other.dataIndexMap), data(other.data)
+		INIMap(INIMap const &other) : dataIndexMap(other.dataIndexMap), data(other.data)
 		{
 		}
 
-		INIMap& operator=(INIMap const& other)
+		INIMap &operator=(INIMap const &other)
 		{
 			std::size_t data_size = other.data.size();
 			for (std::size_t i = 0; i < data_size; ++i)
 			{
-				auto const& key = other.data[i].first;
-				auto const& obj = other.data[i].second;
+				auto const &key = other.data[i].first;
+				auto const &obj = other.data[i].second;
 				data.emplace_back(key, obj);
 			}
 			dataIndexMap = T_DataIndexMap(other.dataIndexMap);
 			return *this;
 		}
 
-		T& operator[](std::string key)
+		T &operator[](SIMDString<64> key)
 		{
 			INIStringUtil::trim(key);
 #ifndef MINI_CASE_SENSITIVE
@@ -184,7 +184,7 @@ namespace mINI
 			std::size_t index = (hasIt) ? it->second : setEmpty(key);
 			return data[index].second;
 		}
-		T get(std::string key) const
+		T get(SIMDString<64> key) const
 		{
 			INIStringUtil::trim(key);
 #ifndef MINI_CASE_SENSITIVE
@@ -197,7 +197,7 @@ namespace mINI
 			}
 			return T(data[it->second].second);
 		}
-		bool has(std::string key) const
+		bool has(SIMDString<64> key) const
 		{
 			INIStringUtil::trim(key);
 #ifndef MINI_CASE_SENSITIVE
@@ -205,7 +205,7 @@ namespace mINI
 #endif
 			return (dataIndexMap.count(key) == 1);
 		}
-		void set(std::string key, T obj)
+		void set(SIMDString<64> key, T obj)
 		{
 			INIStringUtil::trim(key);
 #ifndef MINI_CASE_SENSITIVE
@@ -222,16 +222,16 @@ namespace mINI
 				data.emplace_back(key, obj);
 			}
 		}
-		void set(T_MultiArgs const& multiArgs)
+		void set(T_MultiArgs const &multiArgs)
 		{
-			for (auto const& it : multiArgs)
+			for (auto const &it : multiArgs)
 			{
-				auto const& key = it.first;
-				auto const& obj = it.second;
+				auto const &key = it.first;
+				auto const &obj = it.second;
 				set(key, obj);
 			}
 		}
-		bool remove(std::string key)
+		bool remove(SIMDString<64> key)
 		{
 			INIStringUtil::trim(key);
 #ifndef MINI_CASE_SENSITIVE
@@ -243,9 +243,9 @@ namespace mINI
 				std::size_t index = it->second;
 				data.erase(data.begin() + index);
 				dataIndexMap.erase(it);
-				for (auto& it2 : dataIndexMap)
+				for (auto &it2 : dataIndexMap)
 				{
-					auto& vi = it2.second;
+					auto &vi = it2.second;
 					if (vi > index)
 					{
 						vi--;
@@ -268,11 +268,11 @@ namespace mINI
 		const_iterator end() const { return data.end(); }
 	};
 
-	using INIStructure = INIMap<INIMap<std::string>>;
+	using INIStructure = INIMap<INIMap<SIMDString<64>>>;
 
 	namespace INIParser
 	{
-		using T_ParseValues = std::pair<std::string, std::string>;
+		using T_ParseValues = std::pair<SIMDString<64>, SIMDString<64>>;
 
 		enum class PDataType : char
 		{
@@ -283,7 +283,7 @@ namespace mINI
 			PDATA_UNKNOWN
 		};
 
-		inline PDataType parseLine(std::string line, T_ParseValues& parseData)
+		inline PDataType parseLine(SIMDString<64> line, T_ParseValues &parseData)
 		{
 			parseData.first.clear();
 			parseData.second.clear();
@@ -300,12 +300,12 @@ namespace mINI
 			if (firstCharacter == '[')
 			{
 				auto commentAt = line.find_first_of(';');
-				if (commentAt != std::string::npos)
+				if (commentAt != SIMDString<64>::npos)
 				{
 					line = line.substr(0, commentAt);
 				}
 				auto closingBracketAt = line.find_last_of(']');
-				if (closingBracketAt != std::string::npos)
+				if (closingBracketAt != SIMDString<64>::npos)
 				{
 					auto section = line.substr(1, closingBracketAt - 1);
 					INIStringUtil::trim(section);
@@ -316,7 +316,7 @@ namespace mINI
 			auto lineNorm = line;
 			INIStringUtil::replace(lineNorm, "\\=", "  ");
 			auto equalsAt = lineNorm.find_first_of('=');
-			if (equalsAt != std::string::npos)
+			if (equalsAt != SIMDString<64>::npos)
 			{
 				auto key = line.substr(0, equalsAt);
 				INIStringUtil::trim(key);
@@ -334,7 +334,7 @@ namespace mINI
 	class INIReader
 	{
 	public:
-		using T_LineData = std::vector<std::string>;
+		using T_LineData = std::vector<SIMDString<64>>;
 		using T_LineDataPtr = std::shared_ptr<T_LineData>;
 
 		bool isBOM = false;
@@ -348,22 +348,21 @@ namespace mINI
 			fileReadStream.seekg(0, std::ios::end);
 			const std::size_t fileSize = static_cast<std::size_t>(fileReadStream.tellg());
 			fileReadStream.seekg(0, std::ios::beg);
-			if (fileSize >= 3) {
+			if (fileSize >= 3)
+			{
 				const char header[3] = {
 					static_cast<char>(fileReadStream.get()),
 					static_cast<char>(fileReadStream.get()),
-					static_cast<char>(fileReadStream.get())
-				};
-				isBOM = (
-					header[0] == static_cast<char>(0xEF) &&
-					header[1] == static_cast<char>(0xBB) &&
-					header[2] == static_cast<char>(0xBF)
-				);
+					static_cast<char>(fileReadStream.get())};
+				isBOM = (header[0] == static_cast<char>(0xEF) &&
+						 header[1] == static_cast<char>(0xBB) &&
+						 header[2] == static_cast<char>(0xBF));
 			}
-			else {
+			else
+			{
 				isBOM = false;
 			}
-			std::string fileContents;
+			SIMDString<64> fileContents;
 			fileContents.resize(fileSize);
 			fileReadStream.seekg(isBOM ? 3 : 0, std::ios::beg);
 			fileReadStream.read(&fileContents[0], fileSize);
@@ -373,11 +372,11 @@ namespace mINI
 			{
 				return output;
 			}
-			std::string buffer;
+			SIMDString<64> buffer;
 			buffer.reserve(50);
 			for (std::size_t i = 0; i < fileSize; ++i)
 			{
-				char& c = fileContents[i];
+				char &c = fileContents[i];
 				if (c == '\n')
 				{
 					output.emplace_back(buffer);
@@ -394,27 +393,27 @@ namespace mINI
 		}
 
 	public:
-		INIReader(std::string const& filename, bool keepLineData = false)
+		INIReader(SIMDString<64> const &filename, bool keepLineData = false)
 		{
-			fileReadStream.open(filename, std::ios::in | std::ios::binary);
+			fileReadStream.open(filename.c_str(), std::ios::in | std::ios::binary);
 			if (keepLineData)
 			{
 				lineData = std::make_shared<T_LineData>();
 			}
 		}
-		~INIReader() { }
+		~INIReader() {}
 
-		bool operator>>(INIStructure& data)
+		bool operator>>(INIStructure &data)
 		{
 			if (!fileReadStream.is_open())
 			{
 				return false;
 			}
 			T_LineData fileLines = readFile();
-			std::string section;
+			SIMDString<64> section;
 			bool inSection = false;
 			INIParser::T_ParseValues parseData;
-			for (auto const& line : fileLines)
+			for (auto const &line : fileLines)
 			{
 				auto parseResult = INIParser::parseLine(line, parseData);
 				if (parseResult == INIParser::PDataType::PDATA_SECTION)
@@ -424,8 +423,8 @@ namespace mINI
 				}
 				else if (inSection && parseResult == INIParser::PDataType::PDATA_KEYVALUE)
 				{
-					auto const& key = parseData.first;
-					auto const& value = parseData.second;
+					auto const &key = parseData.first;
+					auto const &value = parseData.second;
 					data[section][key] = value;
 				}
 				if (lineData && parseResult != INIParser::PDataType::PDATA_UNKNOWN)
@@ -453,13 +452,13 @@ namespace mINI
 	public:
 		bool prettyPrint = false;
 
-		INIGenerator(std::string const& filename)
+		INIGenerator(SIMDString<64> const &filename)
 		{
-			fileWriteStream.open(filename, std::ios::out | std::ios::binary);
+			fileWriteStream.open(filename.c_str(), std::ios::out | std::ios::binary);
 		}
-		~INIGenerator() { }
+		~INIGenerator() {}
 
-		bool operator<<(INIStructure const& data)
+		bool operator<<(INIStructure const &data)
 		{
 			if (!fileWriteStream.is_open())
 			{
@@ -472,8 +471,8 @@ namespace mINI
 			auto it = data.begin();
 			for (;;)
 			{
-				auto const& section = it->first;
-				auto const& collection = it->second;
+				auto const &section = it->first;
+				auto const &collection = it->second;
 				fileWriteStream
 					<< "["
 					<< section
@@ -516,16 +515,16 @@ namespace mINI
 	class INIWriter
 	{
 	private:
-		using T_LineData = std::vector<std::string>;
+		using T_LineData = std::vector<SIMDString<64>>;
 		using T_LineDataPtr = std::shared_ptr<T_LineData>;
 
-		std::string filename;
+		SIMDString<64> filename;
 
-		T_LineData getLazyOutput(T_LineDataPtr const& lineData, INIStructure& data, INIStructure& original)
+		T_LineData getLazyOutput(T_LineDataPtr const &lineData, INIStructure &data, INIStructure &original)
 		{
 			T_LineData output;
 			INIParser::T_ParseValues parseData;
-			std::string sectionCurrent;
+			SIMDString<64> sectionCurrent;
 			bool parsingSection = false;
 			bool continueToNextSection = false;
 			bool discardNextEmpty = false;
@@ -569,9 +568,9 @@ namespace mINI
 						}
 						if (data.has(sectionCurrent))
 						{
-							auto& collection = data[sectionCurrent];
-							auto const& key = parseData.first;
-							auto const& value = parseData.second;
+							auto &collection = data[sectionCurrent];
+							auto const &key = parseData.first;
+							auto const &value = parseData.second;
 							if (collection.has(key))
 							{
 								auto outputValue = collection[key];
@@ -587,9 +586,8 @@ namespace mINI
 									auto equalsAt = lineNorm.find_first_of('=');
 									auto valueAt = lineNorm.find_first_not_of(
 										INIStringUtil::whitespaceDelimiters,
-										equalsAt + 1
-									);
-									std::string outputLine = line->substr(0, valueAt);
+										equalsAt + 1);
+									SIMDString<64> outputLine = line->substr(0, valueAt);
 									if (prettyPrint && equalsAt + 1 == valueAt)
 									{
 										outputLine += " ";
@@ -618,9 +616,9 @@ namespace mINI
 					T_LineData linesToAdd;
 					if (data.has(sectionCurrent) && original.has(sectionCurrent))
 					{
-						auto const& collection = data[sectionCurrent];
-						auto const& collectionOriginal = original[sectionCurrent];
-						for (auto const& it : collection)
+						auto const &collection = data[sectionCurrent];
+						auto const &collectionOriginal = original[sectionCurrent];
+						for (auto const &it : collection)
 						{
 							auto key = it.first;
 							if (collectionOriginal.has(key))
@@ -631,8 +629,7 @@ namespace mINI
 							INIStringUtil::replace(key, "=", "\\=");
 							INIStringUtil::trim(value);
 							linesToAdd.emplace_back(
-								key + ((prettyPrint) ? " = " : "=") + value
-							);
+								key + ((prettyPrint) ? " = " : "=") + value);
 						}
 					}
 					if (!linesToAdd.empty())
@@ -640,8 +637,7 @@ namespace mINI
 						output.insert(
 							output.begin() + lastKeyLine,
 							linesToAdd.begin(),
-							linesToAdd.end()
-						);
+							linesToAdd.end());
 					}
 					if (writeNewKeys)
 					{
@@ -650,9 +646,9 @@ namespace mINI
 					}
 				}
 			}
-			for (auto const& it : data)
+			for (auto const &it : data)
 			{
-				auto const& section = it.first;
+				auto const &section = it.first;
 				if (original.has(section))
 				{
 					continue;
@@ -662,16 +658,15 @@ namespace mINI
 					output.emplace_back();
 				}
 				output.emplace_back("[" + section + "]");
-				auto const& collection = it.second;
-				for (auto const& it2 : collection)
+				auto const &collection = it.second;
+				for (auto const &it2 : collection)
 				{
 					auto key = it2.first;
 					auto value = it2.second;
 					INIStringUtil::replace(key, "=", "\\=");
 					INIStringUtil::trim(value);
 					output.emplace_back(
-						key + ((prettyPrint) ? " = " : "=") + value
-					);
+						key + ((prettyPrint) ? " = " : "=") + value);
 				}
 			}
 			return output;
@@ -680,13 +675,13 @@ namespace mINI
 	public:
 		bool prettyPrint = false;
 
-		INIWriter(std::string const& filename)
-		: filename(filename)
+		INIWriter(SIMDString<64> const &filename)
+			: filename(filename)
 		{
 		}
-		~INIWriter() { }
+		~INIWriter() {}
 
-		bool operator<<(INIStructure& data)
+		bool operator<<(INIStructure &data)
 		{
 			struct stat buf;
 			bool fileExists = (stat(filename.c_str(), &buf) == 0);
@@ -713,15 +708,15 @@ namespace mINI
 				return false;
 			}
 			T_LineData output = getLazyOutput(lineData, data, originalData);
-			std::ofstream fileWriteStream(filename, std::ios::out | std::ios::binary);
+			std::ofstream fileWriteStream(filename.c_str(), std::ios::out | std::ios::binary);
 			if (fileWriteStream.is_open())
 			{
-				if (fileIsBOM) {
+				if (fileIsBOM)
+				{
 					const char utf8_BOM[3] = {
 						static_cast<char>(0xEF),
 						static_cast<char>(0xBB),
-						static_cast<char>(0xBF)
-					};
+						static_cast<char>(0xBF)};
 					fileWriteStream.write(utf8_BOM, 3);
 				}
 				if (output.size())
@@ -746,16 +741,17 @@ namespace mINI
 	class INIFile
 	{
 	private:
-		std::string filename;
+		SIMDString<64> filename;
 
 	public:
-		INIFile(std::string const& filename)
-		: filename(filename)
-		{ }
+		INIFile(SIMDString<64> const &filename)
+			: filename(filename)
+		{
+		}
 
-		~INIFile() { }
+		~INIFile() {}
 
-		bool read(INIStructure& data) const
+		bool read(INIStructure &data) const
 		{
 			if (data.size())
 			{
@@ -768,7 +764,7 @@ namespace mINI
 			INIReader reader(filename);
 			return reader >> data;
 		}
-		bool generate(INIStructure const& data, bool pretty = false) const
+		bool generate(INIStructure const &data, bool pretty = false) const
 		{
 			if (filename.empty())
 			{
@@ -778,7 +774,7 @@ namespace mINI
 			generator.prettyPrint = pretty;
 			return generator << data;
 		}
-		bool write(INIStructure& data, bool pretty = false) const
+		bool write(INIStructure &data, bool pretty = false) const
 		{
 			if (filename.empty())
 			{
